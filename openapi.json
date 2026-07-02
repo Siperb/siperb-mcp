@@ -1,0 +1,4737 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Siperb API",
+    "description": "Siperb SIP/VoIP platform API. Manages users, devices, SIP connections, address books, voicemail, personal access tokens, domain users, provisioning, support tickets, and messaging integrations.\n\nAuthentication: Most endpoints require `X-Api-Key: <sessionToken>` header. Use `POST /Login` with a PAT (Personal Access Token) in the `Authorization: Bearer <token>` header to obtain a session token.",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Siperb",
+      "url": "https://www.siperb.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.siperb.com",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "sessionToken": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Login and session management"
+    },
+    {
+      "name": "Users",
+      "description": "User profile management"
+    },
+    {
+      "name": "DomainUsers",
+      "description": "Manage sub-users under your domain"
+    },
+    {
+      "name": "Devices",
+      "description": "SIP device management"
+    },
+    {
+      "name": "Connections",
+      "description": "SIP trunk and connection management"
+    },
+    {
+      "name": "AddressBook",
+      "description": "Contact address book and sync sources"
+    },
+    {
+      "name": "Voicemail",
+      "description": "Voicemail settings, greetings, and messages"
+    },
+    {
+      "name": "PAT",
+      "description": "Personal Access Tokens"
+    },
+    {
+      "name": "oAuth",
+      "description": "Cognito login identity management"
+    },
+    {
+      "name": "Tickets",
+      "description": "Support ticket management via Zoho Desk"
+    },
+    {
+      "name": "Messaging",
+      "description": "Telegram, WhatsApp, and audio call linking"
+    },
+    {
+      "name": "Provisioning",
+      "description": "Device provisioning settings"
+    },
+    {
+      "name": "MessageStream",
+      "description": "Call history and message stream"
+    },
+    {
+      "name": "CallRecording",
+      "description": "Call recording management"
+    },
+    {
+      "name": "CallQos",
+      "description": "Call quality of service metrics"
+    },
+    {
+      "name": "Avatar",
+      "description": "User avatar management"
+    },
+    {
+      "name": "vCard",
+      "description": "User vCard/contact info"
+    },
+    {
+      "name": "DeviceLogs",
+      "description": "Device registration, latency, SIP trace, and console logs"
+    },
+    {
+      "name": "ConnectionLogs",
+      "description": "Connection registration, latency, and SIP trace logs"
+    }
+  ],
+  "paths": {
+    "/Login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Exchange PAT for session token",
+        "description": "Exchanges a Personal Access Token for a session token. Send the PAT in the Authorization header as a Bearer token. Returns UserId and SessionToken. If the PAT already has a cached session less than 25 days old, reuses it.",
+        "operationId": "login",
+        "security": [
+          {
+            "bearerPAT": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns `{ UserId, SessionToken }`"
+          },
+          "401": {
+            "description": "Invalid or expired PAT"
+          }
+        }
+      }
+    },
+    "/Users/{uID}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get user profile",
+        "description": "Returns the user profile including display name, email, UserType (DomainOwner/Internal/External), simplified device and connection lists, domain users, and public vCard fields. Billing and sensitive fields are stripped.",
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile object"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update user profile",
+        "description": "Updates the user's display name fields. Only fields present in the body are updated.",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Description": {
+                    "type": "string",
+                    "description": "Caller ID / description (max 128 chars)"
+                  },
+                  "FirstName": {
+                    "type": "string",
+                    "description": "First name (max 128 chars)"
+                  },
+                  "Surname": {
+                    "type": "string",
+                    "description": "Last name (max 128 chars)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated profile"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete user account",
+        "description": "Permanently deletes the user account and all associated data. Pre-flight checks require: no devices, no connections, no domain users, no active voicemail, and BillingPlan must be Free.",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "send_exit_email",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'no' to suppress goodbye email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          },
+          "204": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/ResetPassword": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Reset user password",
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Password reset"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Avatar": {
+      "get": {
+        "tags": [
+          "Avatar"
+        ],
+        "summary": "Get user avatar",
+        "description": "Returns the avatar as a base64-encoded image. Falls back to a default avatar with `isDefault: true` if none set.",
+        "operationId": "getAvatar",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar object with imageBase64"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Avatar"
+        ],
+        "summary": "Upload user avatar",
+        "operationId": "updateAvatar",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "imageBase64": {
+                    "type": "string",
+                    "description": "Base64 data URI (e.g. data:image/png;base64,...)"
+                  }
+                },
+                "required": [
+                  "imageBase64"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar saved"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Avatar"
+        ],
+        "summary": "Delete user avatar",
+        "operationId": "deleteAvatar",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/vCard": {
+      "get": {
+        "tags": [
+          "vCard"
+        ],
+        "summary": "Get user vCard",
+        "description": "Returns the user's vCard contact information object.",
+        "operationId": "getVcard",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "vCard object"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "vCard"
+        ],
+        "summary": "Update user vCard",
+        "description": "Merges key-value pairs into the existing vCard. String values are truncated to 128 chars.",
+        "operationId": "updateVcard",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Email": {
+                    "type": "string"
+                  },
+                  "Mobile": {
+                    "type": "string"
+                  },
+                  "Number1": {
+                    "type": "string"
+                  },
+                  "Number2": {
+                    "type": "string"
+                  },
+                  "TitleDesc": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated vCard"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers": {
+      "get": {
+        "tags": [
+          "DomainUsers"
+        ],
+        "summary": "List domain users",
+        "description": "Lists all sub-users under the authenticated user's domain. Use `global=yes` to list all users sharing the same SIP domain.",
+        "operationId": "listDomainUsers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "global",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'yes' to list all domain-wide users"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by email or description (case-insensitive)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of domain users"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DomainUsers"
+        ],
+        "summary": "Invite domain user",
+        "description": "Creates/invites a new internal user under the domain. Checks billing seat availability. Sends a welcome email by default.",
+        "operationId": "createDomainUser",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Email": {
+                    "type": "string",
+                    "description": "Email address of the user to invite (max 128 chars)"
+                  },
+                  "Description": {
+                    "type": "string",
+                    "description": "Display name (max 128 chars)"
+                  },
+                  "SendWelcomeEmail": {
+                    "type": "boolean",
+                    "description": "Send welcome email (default: true)"
+                  },
+                  "JoinMailingList": {
+                    "type": "boolean",
+                    "description": "Join mailing list (default: true)"
+                  }
+                },
+                "required": [
+                  "Email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created domain user"
+          },
+          "201": {
+            "description": "Invite sent"
+          },
+          "422": {
+            "description": "User already exists"
+          },
+          "403": {
+            "description": "No available seats"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}": {
+      "get": {
+        "tags": [
+          "DomainUsers"
+        ],
+        "summary": "Get domain user details",
+        "description": "Returns detailed info for a domain user including profile, permissions, billing plan, and vCard.",
+        "operationId": "getDomainUser",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "global",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'yes' for domain-wide lookup by UserId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain user details"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "DomainUsers"
+        ],
+        "summary": "Update domain user",
+        "description": "Updates a domain user's description, permissions, and/or billing plan. Permission and billing changes only apply if the user has accepted the invite.",
+        "operationId": "updateDomainUser",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "UserDescription": {
+                    "type": "string",
+                    "description": "Display name (max 128 chars)"
+                  },
+                  "EnableDomainAdmin": {
+                    "type": "boolean"
+                  },
+                  "EnableAccountDetails": {
+                    "type": "boolean"
+                  },
+                  "EnableDevices": {
+                    "type": "boolean"
+                  },
+                  "EnableConnections": {
+                    "type": "boolean"
+                  },
+                  "EnableVoicemail": {
+                    "type": "boolean"
+                  },
+                  "EnableSipTraces": {
+                    "type": "boolean"
+                  },
+                  "EnableStreamHistory": {
+                    "type": "boolean"
+                  },
+                  "EnableBilling": {
+                    "type": "boolean"
+                  },
+                  "EnableDomainUsers": {
+                    "type": "boolean"
+                  },
+                  "EnableDeveloperSettings": {
+                    "type": "boolean"
+                  },
+                  "EnableSupport": {
+                    "type": "boolean"
+                  },
+                  "EnableApps": {
+                    "type": "boolean"
+                  },
+                  "BillingPlan": {
+                    "type": "string",
+                    "description": "Product ID for billing plan change"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated domain user"
+          },
+          "400": {
+            "description": "Insufficient billing seats"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "DomainUsers"
+        ],
+        "summary": "Remove domain user",
+        "description": "Removes a domain user. External users must delete their own account first. Internal users are fully deleted.",
+        "operationId": "deleteDomainUser",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "send_exit_email",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'no' to suppress exit email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Domain user removed"
+          },
+          "204": {
+            "description": "Removed"
+          },
+          "422": {
+            "description": "External user still exists"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Avatar": {
+      "get": {
+        "tags": [
+          "DomainUsers"
+        ],
+        "summary": "Get domain user avatar",
+        "description": "Returns the avatar for a domain user. Verifies same-domain membership.",
+        "operationId": "getDomainUserAvatar",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar object with imageBase64"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Devices": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "List devices",
+        "description": "Returns all devices enriched with realtime registration, latency, and push data.",
+        "operationId": "listDevices",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of devices"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Create device",
+        "description": "Creates a new device with a generated provision token and SIP contact.",
+        "operationId": "createDevice",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "platform": {
+                    "type": "string",
+                    "description": "Platform: ios, android, webpage, electron, script"
+                  },
+                  "provision_name": {
+                    "type": "string",
+                    "description": "Device display name (max 128 chars)"
+                  },
+                  "RegistrationMode": {
+                    "type": "string",
+                    "description": "WebSocket or Proxy (default)"
+                  },
+                  "WebSocketServer": {
+                    "type": "string",
+                    "description": "WebSocket server (WebSocket mode)"
+                  },
+                  "WebSocketPort": {
+                    "type": "integer",
+                    "description": "WebSocket port (WebSocket mode)"
+                  },
+                  "WebSocketPath": {
+                    "type": "string",
+                    "description": "WebSocket path (WebSocket mode)"
+                  },
+                  "SipDomain": {
+                    "type": "string",
+                    "description": "SIP domain (WebSocket mode)"
+                  },
+                  "SipUsername": {
+                    "type": "string",
+                    "description": "SIP username (WebSocket mode)"
+                  },
+                  "SipPassword": {
+                    "type": "string",
+                    "description": "SIP password (WebSocket mode)"
+                  }
+                },
+                "required": [
+                  "platform",
+                  "provision_name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created device"
+          },
+          "201": {
+            "description": "Device created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Devices/{deviceId}": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Get device details",
+        "description": "Returns a single device with full provisioning settings (device -> user -> domain cascade) and optional SIP credentials.",
+        "operationId": "getDevice",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'yes' for schema-annotated settings view"
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'yes' to include SIP password and JWT"
+          },
+          {
+            "name": "settings_json",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to anything other than 'yes' to exclude Settings_json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device details"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Update device",
+        "description": "Updates device settings, description, and/or registration mode.",
+        "operationId": "updateDevice",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Description": {
+                    "type": "string",
+                    "description": "Device name (max 128 chars)"
+                  },
+                  "Settings_json": {
+                    "type": "object",
+                    "description": "Key-value settings to merge; null values delete the key"
+                  },
+                  "RegistrationMode": {
+                    "type": "string",
+                    "description": "WebSocket or Proxy"
+                  },
+                  "WebSocketServer": {
+                    "type": "string"
+                  },
+                  "WebSocketPort": {
+                    "type": "integer"
+                  },
+                  "WebSocketPath": {
+                    "type": "string"
+                  },
+                  "SipDomain": {
+                    "type": "string"
+                  },
+                  "SipUsername": {
+                    "type": "string"
+                  },
+                  "SipPassword": {
+                    "type": "string"
+                  },
+                  "ProxyEnabled": {
+                    "type": "boolean"
+                  },
+                  "UpstreamTransport": {
+                    "type": "string"
+                  },
+                  "UpstreamServer": {
+                    "type": "string"
+                  },
+                  "UpstreamPort": {
+                    "type": "integer"
+                  },
+                  "SelfSignedCertificate": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated device"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Delete device",
+        "operationId": "deleteDevice",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Devices/{deviceId}/ConsoleLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get device console logs",
+        "operationId": "getConsoleLog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of console log entries"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Post device console logs",
+        "description": "Batch-inserts console log entries. Requires non-Free billing plan.",
+        "operationId": "postConsoleLog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                },
+                "description": "Array of log entry objects with Ts (timestamp) field"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logs saved"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "403": {
+            "description": "Free plan"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Devices/{deviceId}/RegisterLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get device registration logs",
+        "description": "Lists SIP registration events (insert/update/delete) for a device.",
+        "operationId": "getDeviceRegisterLog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of registration log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Devices/{deviceId}/NetworkLatencyLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get device network latency logs",
+        "description": "Lists network latency measurements for a device. Values in milliseconds.",
+        "operationId": "getDeviceLatencyLog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of latency log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Devices/{deviceId}/SipTraceLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "List device SIP traces",
+        "description": "Lists outbound SIP call trace correlation logs for a device.",
+        "operationId": "listDeviceSipTraces",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP trace correlation entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Devices/{deviceId}/SipTraceLog/{traceId}": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get SIP trace detail",
+        "description": "Returns the full SIP message trace for a specific trace ID from the HEP database.",
+        "operationId": "getDeviceSipTrace",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "traceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP messages with raw SIP data"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Devices": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "List devices",
+        "description": "Returns all devices enriched with realtime registration, latency, and push data.",
+        "operationId": "listDevicesDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of devices"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Create device",
+        "description": "Creates a new device with a generated provision token and SIP contact.",
+        "operationId": "createDeviceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "platform": {
+                    "type": "string",
+                    "description": "Platform: ios, android, webpage, electron, script"
+                  },
+                  "provision_name": {
+                    "type": "string",
+                    "description": "Device display name (max 128 chars)"
+                  },
+                  "RegistrationMode": {
+                    "type": "string",
+                    "description": "WebSocket or Proxy (default)"
+                  },
+                  "WebSocketServer": {
+                    "type": "string",
+                    "description": "WebSocket server (WebSocket mode)"
+                  },
+                  "WebSocketPort": {
+                    "type": "integer",
+                    "description": "WebSocket port (WebSocket mode)"
+                  },
+                  "WebSocketPath": {
+                    "type": "string",
+                    "description": "WebSocket path (WebSocket mode)"
+                  },
+                  "SipDomain": {
+                    "type": "string",
+                    "description": "SIP domain (WebSocket mode)"
+                  },
+                  "SipUsername": {
+                    "type": "string",
+                    "description": "SIP username (WebSocket mode)"
+                  },
+                  "SipPassword": {
+                    "type": "string",
+                    "description": "SIP password (WebSocket mode)"
+                  }
+                },
+                "required": [
+                  "platform",
+                  "provision_name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created device"
+          },
+          "201": {
+            "description": "Device created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Devices/{deviceId}": {
+      "get": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Get device details",
+        "description": "Returns a single device with full provisioning settings (device -> user -> domain cascade) and optional SIP credentials.",
+        "operationId": "getDeviceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'yes' for schema-annotated settings view"
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to 'yes' to include SIP password and JWT"
+          },
+          {
+            "name": "settings_json",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Set to anything other than 'yes' to exclude Settings_json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device details"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Update device",
+        "description": "Updates device settings, description, and/or registration mode.",
+        "operationId": "updateDeviceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Description": {
+                    "type": "string",
+                    "description": "Device name (max 128 chars)"
+                  },
+                  "Settings_json": {
+                    "type": "object",
+                    "description": "Key-value settings to merge; null values delete the key"
+                  },
+                  "RegistrationMode": {
+                    "type": "string",
+                    "description": "WebSocket or Proxy"
+                  },
+                  "WebSocketServer": {
+                    "type": "string"
+                  },
+                  "WebSocketPort": {
+                    "type": "integer"
+                  },
+                  "WebSocketPath": {
+                    "type": "string"
+                  },
+                  "SipDomain": {
+                    "type": "string"
+                  },
+                  "SipUsername": {
+                    "type": "string"
+                  },
+                  "SipPassword": {
+                    "type": "string"
+                  },
+                  "ProxyEnabled": {
+                    "type": "boolean"
+                  },
+                  "UpstreamTransport": {
+                    "type": "string"
+                  },
+                  "UpstreamServer": {
+                    "type": "string"
+                  },
+                  "UpstreamPort": {
+                    "type": "integer"
+                  },
+                  "SelfSignedCertificate": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated device"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Devices"
+        ],
+        "summary": "Delete device",
+        "operationId": "deleteDeviceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Devices/{deviceId}/ConsoleLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get device console logs",
+        "operationId": "getConsoleLogDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of console log entries"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Post device console logs",
+        "description": "Batch-inserts console log entries. Requires non-Free billing plan.",
+        "operationId": "postConsoleLogDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                },
+                "description": "Array of log entry objects with Ts (timestamp) field"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logs saved"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "403": {
+            "description": "Free plan"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Devices/{deviceId}/RegisterLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get device registration logs",
+        "description": "Lists SIP registration events (insert/update/delete) for a device.",
+        "operationId": "getDeviceRegisterLogDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of registration log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Devices/{deviceId}/NetworkLatencyLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get device network latency logs",
+        "description": "Lists network latency measurements for a device. Values in milliseconds.",
+        "operationId": "getDeviceLatencyLogDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of latency log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Devices/{deviceId}/SipTraceLog": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "List device SIP traces",
+        "description": "Lists outbound SIP call trace correlation logs for a device.",
+        "operationId": "listDeviceSipTracesDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP trace correlation entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Devices/{deviceId}/SipTraceLog/{traceId}": {
+      "get": {
+        "tags": [
+          "DeviceLogs"
+        ],
+        "summary": "Get SIP trace detail",
+        "description": "Returns the full SIP message trace for a specific trace ID from the HEP database.",
+        "operationId": "getDeviceSipTraceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/deviceId"
+          },
+          {
+            "name": "traceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP messages with raw SIP data"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Connections": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List connections",
+        "description": "Returns all SIP connections sorted by weight. Supports outbound dial query (?q=) and method filter (?m=).",
+        "operationId": "listConnections",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Outbound dial query number to match against DialPattern"
+          },
+          {
+            "name": "m",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "SIP method filter (e.g. INVITE, SUBSCRIBE)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of connections"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Create connection",
+        "description": "Creates a new SIP connection with defaults (DialPattern '.', Weight 0, AllowSrc '0.0.0.0/0'). Types: OutboundRegistration, OutboundTrunk, InboundRegistration, DirectConnection, FeatureCode, ServiceProvider.",
+        "operationId": "createConnection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string",
+                    "description": "Connection display name"
+                  },
+                  "Type": {
+                    "type": "string",
+                    "description": "Connection type"
+                  },
+                  "DialPattern": {
+                    "type": "string",
+                    "description": "Regex dial pattern (default: '.')"
+                  },
+                  "Weight": {
+                    "type": "integer",
+                    "description": "Routing priority (default: 0, lower = higher priority)"
+                  },
+                  "AllowSrc": {
+                    "type": "string",
+                    "description": "Allowed source IP/CIDR (default: '0.0.0.0/0')"
+                  },
+                  "Method": {
+                    "type": "object",
+                    "description": "SIP methods array (e.g. ['INVITE','SUBSCRIBE'])"
+                  },
+                  "Registration": {
+                    "type": "object",
+                    "description": "SIP registration parameters for OutboundRegistration/InboundRegistration"
+                  }
+                },
+                "required": [
+                  "Name",
+                  "Type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created connection"
+          },
+          "201": {
+            "description": "Connection created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Connections/{connectionId}": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get connection details",
+        "description": "Returns a connection with realtime SBC status from OpenSIPS JSON-RPC and DynamoDB latency data.",
+        "operationId": "getConnection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connection details with realtime status"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Update connection",
+        "description": "Updates a connection's settings. For registration types, triggers SBC re-registration.",
+        "operationId": "updateConnection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Type": {
+                    "type": "string"
+                  },
+                  "DialPattern": {
+                    "type": "string"
+                  },
+                  "Weight": {
+                    "type": "integer"
+                  },
+                  "AllowSrc": {
+                    "type": "string"
+                  },
+                  "Method": {
+                    "type": "object"
+                  },
+                  "Registration": {
+                    "type": "object",
+                    "description": "SIP registration parameters"
+                  },
+                  "Enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated connection"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Delete connection",
+        "description": "Deletes the connection, cleans up MySQL registrant/subscriber entries, and triggers SBC reg_disable/reg_reload.",
+        "operationId": "deleteConnection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connection deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Connections/{connectionId}/RegisterLog": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "Get connection registration logs",
+        "description": "Lists SBC-side registration events for an InboundRegistration connection.",
+        "operationId": "getConnRegisterLog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of registration log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Connections/{connectionId}/NetworkLatencyLog": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "Get connection network latency logs",
+        "description": "Lists SBC-side network latency measurements for an InboundRegistration connection.",
+        "operationId": "getConnLatencyLog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of latency log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Connections/{connectionId}/SipTraceLog": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "List connection SIP traces",
+        "description": "Lists inbound SIP call trace correlation logs for a connection.",
+        "operationId": "listConnSipTraces",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP trace correlation entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Connections/{connectionId}/SipTraceLog/{traceId}": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "Get connection SIP trace detail",
+        "description": "Returns the full SIP message trace for a specific trace ID.",
+        "operationId": "getConnSipTrace",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "traceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP messages"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Connections": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "List connections",
+        "description": "Returns all SIP connections sorted by weight. Supports outbound dial query (?q=) and method filter (?m=).",
+        "operationId": "listConnectionsDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Outbound dial query number to match against DialPattern"
+          },
+          {
+            "name": "m",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "SIP method filter (e.g. INVITE, SUBSCRIBE)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of connections"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Create connection",
+        "description": "Creates a new SIP connection with defaults (DialPattern '.', Weight 0, AllowSrc '0.0.0.0/0'). Types: OutboundRegistration, OutboundTrunk, InboundRegistration, DirectConnection, FeatureCode, ServiceProvider.",
+        "operationId": "createConnectionDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string",
+                    "description": "Connection display name"
+                  },
+                  "Type": {
+                    "type": "string",
+                    "description": "Connection type"
+                  },
+                  "DialPattern": {
+                    "type": "string",
+                    "description": "Regex dial pattern (default: '.')"
+                  },
+                  "Weight": {
+                    "type": "integer",
+                    "description": "Routing priority (default: 0, lower = higher priority)"
+                  },
+                  "AllowSrc": {
+                    "type": "string",
+                    "description": "Allowed source IP/CIDR (default: '0.0.0.0/0')"
+                  },
+                  "Method": {
+                    "type": "object",
+                    "description": "SIP methods array (e.g. ['INVITE','SUBSCRIBE'])"
+                  },
+                  "Registration": {
+                    "type": "object",
+                    "description": "SIP registration parameters for OutboundRegistration/InboundRegistration"
+                  }
+                },
+                "required": [
+                  "Name",
+                  "Type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created connection"
+          },
+          "201": {
+            "description": "Connection created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Connections/{connectionId}": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Get connection details",
+        "description": "Returns a connection with realtime SBC status from OpenSIPS JSON-RPC and DynamoDB latency data.",
+        "operationId": "getConnectionDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connection details with realtime status"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Update connection",
+        "description": "Updates a connection's settings. For registration types, triggers SBC re-registration.",
+        "operationId": "updateConnectionDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Type": {
+                    "type": "string"
+                  },
+                  "DialPattern": {
+                    "type": "string"
+                  },
+                  "Weight": {
+                    "type": "integer"
+                  },
+                  "AllowSrc": {
+                    "type": "string"
+                  },
+                  "Method": {
+                    "type": "object"
+                  },
+                  "Registration": {
+                    "type": "object",
+                    "description": "SIP registration parameters"
+                  },
+                  "Enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated connection"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Connections"
+        ],
+        "summary": "Delete connection",
+        "description": "Deletes the connection, cleans up MySQL registrant/subscriber entries, and triggers SBC reg_disable/reg_reload.",
+        "operationId": "deleteConnectionDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connection deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Connections/{connectionId}/RegisterLog": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "Get connection registration logs",
+        "description": "Lists SBC-side registration events for an InboundRegistration connection.",
+        "operationId": "getConnRegisterLogDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of registration log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Connections/{connectionId}/NetworkLatencyLog": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "Get connection network latency logs",
+        "description": "Lists SBC-side network latency measurements for an InboundRegistration connection.",
+        "operationId": "getConnLatencyLogDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of latency log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Connections/{connectionId}/SipTraceLog": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "List connection SIP traces",
+        "description": "Lists inbound SIP call trace correlation logs for a connection.",
+        "operationId": "listConnSipTracesDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date (YYYY-MM-DD). Default: last 24 hours"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max results (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP trace correlation entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Connections/{connectionId}/SipTraceLog/{traceId}": {
+      "get": {
+        "tags": [
+          "ConnectionLogs"
+        ],
+        "summary": "Get connection SIP trace detail",
+        "description": "Returns the full SIP message trace for a specific trace ID.",
+        "operationId": "getConnSipTraceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/connectionId"
+          },
+          {
+            "name": "traceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SIP messages"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/AddressBook": {
+      "get": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "List address book contacts",
+        "operationId": "listAddressBook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of address book contacts"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Create address book contact",
+        "operationId": "createAddressBookContact",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "FirstName": {
+                    "type": "string"
+                  },
+                  "LastName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "Phone": {
+                    "type": "string"
+                  },
+                  "Company": {
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact created"
+          },
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/AddressBook/{itemId}": {
+      "put": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Update address book contact",
+        "operationId": "updateAddressBookContact",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "FirstName": {
+                    "type": "string"
+                  },
+                  "LastName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "Phone": {
+                    "type": "string"
+                  },
+                  "Company": {
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Delete address book contact",
+        "operationId": "deleteAddressBookContact",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contact deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/AddressBook/Sources": {
+      "get": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "List address book sync sources",
+        "description": "Returns configured sync sources (Google, CardDAV, file upload, etc.).",
+        "operationId": "listAddressBookSources",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of sync sources"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Create address book sync source",
+        "operationId": "createAddressBookSource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Type": {
+                    "type": "string",
+                    "description": "Source type: google, carddav, file"
+                  },
+                  "Name": {
+                    "type": "string",
+                    "description": "Display name"
+                  },
+                  "Settings": {
+                    "type": "object",
+                    "description": "Source-specific configuration"
+                  }
+                },
+                "required": [
+                  "Type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source created"
+          },
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/AddressBook/Sources/{sourceId}": {
+      "put": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Update address book sync source",
+        "operationId": "updateAddressBookSource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Settings": {
+                    "type": "object"
+                  },
+                  "RefreshToken": {
+                    "type": "string",
+                    "description": "OAuth refresh token (set by OAuth callback)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Delete address book sync source",
+        "operationId": "deleteAddressBookSource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/AddressBook": {
+      "get": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "List address book contacts",
+        "operationId": "listAddressBookDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of address book contacts"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Create address book contact",
+        "operationId": "createAddressBookContactDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "FirstName": {
+                    "type": "string"
+                  },
+                  "LastName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "Phone": {
+                    "type": "string"
+                  },
+                  "Company": {
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact created"
+          },
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/AddressBook/{itemId}": {
+      "put": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Update address book contact",
+        "operationId": "updateAddressBookContactDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "FirstName": {
+                    "type": "string"
+                  },
+                  "LastName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "Phone": {
+                    "type": "string"
+                  },
+                  "Company": {
+                    "type": "string"
+                  },
+                  "Notes": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Delete address book contact",
+        "operationId": "deleteAddressBookContactDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contact deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/AddressBook/Sources": {
+      "get": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "List address book sync sources",
+        "description": "Returns configured sync sources (Google, CardDAV, file upload, etc.).",
+        "operationId": "listAddressBookSourcesDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of sync sources"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Create address book sync source",
+        "operationId": "createAddressBookSourceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Type": {
+                    "type": "string",
+                    "description": "Source type: google, carddav, file"
+                  },
+                  "Name": {
+                    "type": "string",
+                    "description": "Display name"
+                  },
+                  "Settings": {
+                    "type": "object",
+                    "description": "Source-specific configuration"
+                  }
+                },
+                "required": [
+                  "Type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source created"
+          },
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/AddressBook/Sources/{sourceId}": {
+      "put": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Update address book sync source",
+        "operationId": "updateAddressBookSourceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
+                  "Settings": {
+                    "type": "object"
+                  },
+                  "RefreshToken": {
+                    "type": "string",
+                    "description": "OAuth refresh token (set by OAuth callback)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source updated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "AddressBook"
+        ],
+        "summary": "Delete address book sync source",
+        "operationId": "deleteAddressBookSourceDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Voicemail": {
+      "get": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Get voicemail settings and messages",
+        "description": "Returns voicemail settings (PIN, greeting, notification preferences) and a list of voicemail messages (metadata only, no audio).",
+        "operationId": "getVoicemail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Voicemail settings and message list"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Update voicemail settings",
+        "description": "Updates voicemail settings. PIN must be at least 3 digits. Existing greeting is preserved if not included.",
+        "operationId": "updateVoicemail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pin": {
+                    "type": "integer",
+                    "description": "Voicemail PIN (min 3 digits, >= 100)"
+                  },
+                  "EnabledTranscribe": {
+                    "type": "boolean",
+                    "description": "Enable voicemail transcription"
+                  },
+                  "EnableVoceimailNotify": {
+                    "type": "boolean",
+                    "description": "Enable email notification"
+                  },
+                  "EnableTelegramNotify": {
+                    "type": "boolean",
+                    "description": "Enable Telegram notification"
+                  },
+                  "EnableWhatsAppNotify": {
+                    "type": "boolean",
+                    "description": "Enable WhatsApp notification"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated voicemail settings"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Delete voicemail",
+        "description": "Removes all voicemail settings, the greeting, and MySQL config. S3 messages are not deleted.",
+        "operationId": "deleteVoicemail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Voicemail deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Voicemail/Greeting": {
+      "put": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Upload voicemail greeting",
+        "description": "Uploads or generates a greeting. For text format, uses OpenAI TTS. Audio is converted to 8kHz mono WAV for Asterisk.",
+        "operationId": "updateVoicemailGreeting",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Format": {
+                    "type": "string",
+                    "description": "'text' or 'audio'"
+                  },
+                  "Text": {
+                    "type": "string",
+                    "description": "Greeting text for TTS (when Format=text)"
+                  },
+                  "Voice": {
+                    "type": "string",
+                    "description": "TTS voice: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse"
+                  },
+                  "Instructions": {
+                    "type": "string",
+                    "description": "Additional TTS instructions"
+                  },
+                  "Recording": {
+                    "type": "string",
+                    "description": "Base64-encoded audio (when Format=audio)"
+                  }
+                },
+                "required": [
+                  "Format"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Greeting saved"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Delete voicemail greeting",
+        "operationId": "deleteVoicemailGreeting",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Greeting deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Voicemail/Messages/{messageId}": {
+      "get": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Get voicemail message",
+        "description": "Returns a single voicemail message including the Base64-encoded audio recording.",
+        "operationId": "getVoicemailMessage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Voicemail message with Base64 audio"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Delete voicemail message",
+        "operationId": "deleteVoicemailMessage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Voicemail": {
+      "get": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Get voicemail settings and messages",
+        "description": "Returns voicemail settings (PIN, greeting, notification preferences) and a list of voicemail messages (metadata only, no audio).",
+        "operationId": "getVoicemailDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Voicemail settings and message list"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Update voicemail settings",
+        "description": "Updates voicemail settings. PIN must be at least 3 digits. Existing greeting is preserved if not included.",
+        "operationId": "updateVoicemailDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pin": {
+                    "type": "integer",
+                    "description": "Voicemail PIN (min 3 digits, >= 100)"
+                  },
+                  "EnabledTranscribe": {
+                    "type": "boolean",
+                    "description": "Enable voicemail transcription"
+                  },
+                  "EnableVoceimailNotify": {
+                    "type": "boolean",
+                    "description": "Enable email notification"
+                  },
+                  "EnableTelegramNotify": {
+                    "type": "boolean",
+                    "description": "Enable Telegram notification"
+                  },
+                  "EnableWhatsAppNotify": {
+                    "type": "boolean",
+                    "description": "Enable WhatsApp notification"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated voicemail settings"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Delete voicemail",
+        "description": "Removes all voicemail settings, the greeting, and MySQL config. S3 messages are not deleted.",
+        "operationId": "deleteVoicemailDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Voicemail deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Voicemail/Greeting": {
+      "put": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Upload voicemail greeting",
+        "description": "Uploads or generates a greeting. For text format, uses OpenAI TTS. Audio is converted to 8kHz mono WAV for Asterisk.",
+        "operationId": "updateVoicemailGreetingDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Format": {
+                    "type": "string",
+                    "description": "'text' or 'audio'"
+                  },
+                  "Text": {
+                    "type": "string",
+                    "description": "Greeting text for TTS (when Format=text)"
+                  },
+                  "Voice": {
+                    "type": "string",
+                    "description": "TTS voice: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse"
+                  },
+                  "Instructions": {
+                    "type": "string",
+                    "description": "Additional TTS instructions"
+                  },
+                  "Recording": {
+                    "type": "string",
+                    "description": "Base64-encoded audio (when Format=audio)"
+                  }
+                },
+                "required": [
+                  "Format"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Greeting saved"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Delete voicemail greeting",
+        "operationId": "deleteVoicemailGreetingDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Greeting deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Voicemail/Messages/{messageId}": {
+      "get": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Get voicemail message",
+        "description": "Returns a single voicemail message including the Base64-encoded audio recording.",
+        "operationId": "getVoicemailMessageDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Voicemail message with Base64 audio"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Voicemail"
+        ],
+        "summary": "Delete voicemail message",
+        "operationId": "deleteVoicemailMessageDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/PAT": {
+      "get": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "List personal access tokens",
+        "description": "Returns metadata for all PATs (Id, FriendlyName, ExpiresAt, CreatedAt). Token values are never returned.",
+        "operationId": "listPATs",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of PAT metadata"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "Create personal access token",
+        "description": "Generates a new PAT and returns the token value (one-time only). Only the hash is stored.",
+        "operationId": "createPAT",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expirationDays": {
+                    "type": "integer",
+                    "description": "Days until expiry (default: 100)"
+                  },
+                  "friendlyName": {
+                    "type": "string",
+                    "description": "Label for the token (max 128 chars, default: 'No Name')"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created PAT with PersonalAccessToken value (one-time)"
+          },
+          "201": {
+            "description": "Token created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/PAT/AccessLog": {
+      "get": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "Get PAT access log",
+        "description": "Audit log of PAT-based login attempts with timestamps, token names, IP, and user agent.",
+        "operationId": "getPATAccessLog",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date to filter (default: last 24h)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max entries (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of access log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/PAT/{patId}": {
+      "delete": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "Revoke personal access token",
+        "operationId": "deletePAT",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "patId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token revoked"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/PAT": {
+      "get": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "List personal access tokens",
+        "description": "Returns metadata for all PATs (Id, FriendlyName, ExpiresAt, CreatedAt). Token values are never returned.",
+        "operationId": "listPATsDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of PAT metadata"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "Create personal access token",
+        "description": "Generates a new PAT and returns the token value (one-time only). Only the hash is stored.",
+        "operationId": "createPATDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expirationDays": {
+                    "type": "integer",
+                    "description": "Days until expiry (default: 100)"
+                  },
+                  "friendlyName": {
+                    "type": "string",
+                    "description": "Label for the token (max 128 chars, default: 'No Name')"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created PAT with PersonalAccessToken value (one-time)"
+          },
+          "201": {
+            "description": "Token created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/PAT/AccessLog": {
+      "get": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "Get PAT access log",
+        "description": "Audit log of PAT-based login attempts with timestamps, token names, IP, and user agent.",
+        "operationId": "getPATAccessLogDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO date to filter (default: last 24h)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max entries (default: 9999)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of access log entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/PAT/{patId}": {
+      "delete": {
+        "tags": [
+          "PAT"
+        ],
+        "summary": "Revoke personal access token",
+        "operationId": "deletePATDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "patId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token revoked"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/oAuth": {
+      "get": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "List Cognito logins",
+        "description": "Lists Cognito user pool identities for the user.",
+        "operationId": "listOAuth",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of Cognito users"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "Create Cognito login",
+        "description": "Creates a new Cognito login identity. Can auto-generate or set a specific password.",
+        "operationId": "createOAuth",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "GeneratePassword": {
+                    "type": "boolean",
+                    "description": "Auto-generate password (default: true)"
+                  },
+                  "Password": {
+                    "type": "string",
+                    "description": "Custom password (when GeneratePassword=false)"
+                  },
+                  "ResetOnNextLogin": {
+                    "type": "boolean",
+                    "description": "Force password change on first login (default: true)"
+                  },
+                  "SendPassword": {
+                    "type": "boolean",
+                    "description": "Send branded invite email with password (default: false)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created Cognito user"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "409": {
+            "description": "User already exists"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/oAuth/{identity}": {
+      "put": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "Reset Cognito password",
+        "description": "Resets the password for a Cognito login to a random temporary password.",
+        "operationId": "resetOAuthPassword",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "identity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cognito username"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Password reset"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "Delete Cognito login",
+        "operationId": "deleteOAuth",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "identity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cognito username"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/oAuth": {
+      "get": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "List Cognito logins",
+        "description": "Lists Cognito user pool identities for the user.",
+        "operationId": "listOAuthDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of Cognito users"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "Create Cognito login",
+        "description": "Creates a new Cognito login identity. Can auto-generate or set a specific password.",
+        "operationId": "createOAuthDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "GeneratePassword": {
+                    "type": "boolean",
+                    "description": "Auto-generate password (default: true)"
+                  },
+                  "Password": {
+                    "type": "string",
+                    "description": "Custom password (when GeneratePassword=false)"
+                  },
+                  "ResetOnNextLogin": {
+                    "type": "boolean",
+                    "description": "Force password change on first login (default: true)"
+                  },
+                  "SendPassword": {
+                    "type": "boolean",
+                    "description": "Send branded invite email with password (default: false)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created Cognito user"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "409": {
+            "description": "User already exists"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/oAuth/{identity}": {
+      "put": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "Reset Cognito password",
+        "description": "Resets the password for a Cognito login to a random temporary password.",
+        "operationId": "resetOAuthPasswordDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "identity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cognito username"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Password reset"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "oAuth"
+        ],
+        "summary": "Delete Cognito login",
+        "operationId": "deleteOAuthDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          },
+          {
+            "name": "identity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cognito username"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Tickets": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "List support tickets",
+        "description": "Lists all Zoho Desk support tickets for the user (up to 20).",
+        "operationId": "listTickets",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of tickets"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Create support ticket",
+        "description": "Creates a new support ticket in Zoho Desk.",
+        "operationId": "createTicket",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "description": "Ticket subject (default: 'No Subject')"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Ticket description"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket created"
+          },
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Tickets/{ticketId}": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "summary": "Get ticket conversations",
+        "description": "Returns the conversation threads for a specific support ticket from Zoho Desk.",
+        "operationId": "getTicket",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "ticketId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket conversation threads"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/TelegramLink": {
+      "post": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Generate Telegram linking code",
+        "description": "Generates an 8-char hex code to link a Telegram account. Send this code to the Siperb Telegram bot to complete linking.",
+        "operationId": "createTelegramLink",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns `{ TelegramLinkCode }`"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Unlink Telegram account",
+        "description": "Removes the Telegram link code and chat ID from the user.",
+        "operationId": "deleteTelegramLink",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Telegram unlinked"
+          },
+          "204": {
+            "description": "Unlinked"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/TelegramMessages": {
+      "get": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Get Telegram messages",
+        "description": "Returns conversation messages from the linked Telegram chat via OpenAI Conversations API.",
+        "operationId": "getTelegramMessages",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max messages (default: 20, max: 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of messages"
+          },
+          "404": {
+            "description": "No Telegram linked"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/WhatsAppLink": {
+      "post": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Generate WhatsApp linking code",
+        "description": "Generates an 8-char hex code to link a WhatsApp account.",
+        "operationId": "createWhatsAppLink",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns `{ WhatsAppLinkCode }`"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Unlink WhatsApp account",
+        "operationId": "deleteWhatsAppLink",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "WhatsApp unlinked"
+          },
+          "204": {
+            "description": "Unlinked"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/WhatsAppMessages": {
+      "get": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Get WhatsApp messages",
+        "description": "Returns conversation messages from the linked WhatsApp number via OpenAI Conversations API.",
+        "operationId": "getWhatsAppMessages",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Max messages (default: 20, max: 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of messages"
+          },
+          "404": {
+            "description": "No WhatsApp linked"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/AudioCallLink": {
+      "post": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Generate audio call linking PIN",
+        "description": "Generates a 5-digit PIN to link an audio call number. Validate with PUT /ValidateAudioCallLink.",
+        "operationId": "createAudioCallLink",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns `{ AudioCallLinkCode }`"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Unlink audio call account",
+        "operationId": "deleteAudioCallLink",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audio call unlinked"
+          },
+          "204": {
+            "description": "Unlinked"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/AudioCallMessages": {
+      "get": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Get audio call messages",
+        "description": "Returns audio call conversation messages. Currently returns an empty array (placeholder).",
+        "operationId": "getAudioCallMessages",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of messages (currently empty)"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/ValidateAudioCallLink": {
+      "put": {
+        "tags": [
+          "Messaging"
+        ],
+        "summary": "Validate audio call linking PIN",
+        "description": "Validates a 5-digit PIN to complete audio call number linking.",
+        "operationId": "validateAudioCallLink",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "description": "5-digit PIN from POST /AudioCallLink"
+                  },
+                  "caller_id": {
+                    "type": "string",
+                    "description": "Phone number to link"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "User's email address"
+                  }
+                },
+                "required": [
+                  "pin",
+                  "caller_id",
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Link validated"
+          },
+          "400": {
+            "description": "Wrong PIN"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/Provisioning": {
+      "get": {
+        "tags": [
+          "Provisioning"
+        ],
+        "summary": "Get provisioning settings",
+        "description": "Returns provisioning settings expanded against the master schema with types, labels, defaults, and current values.",
+        "operationId": "getProvisioning",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of provisioning setting definitions"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Provisioning"
+        ],
+        "summary": "Update provisioning settings",
+        "description": "Merges setting changes into the user's ProvisionSettings. Set a value to null to delete that setting. Strings are capped at 1024 chars.",
+        "operationId": "updateProvisioning",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated provisioning settings"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/DomainUsers/{id}/Provisioning": {
+      "get": {
+        "tags": [
+          "Provisioning"
+        ],
+        "summary": "Get provisioning settings",
+        "description": "Returns provisioning settings expanded against the master schema with types, labels, defaults, and current values.",
+        "operationId": "getProvisioningDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of provisioning setting definitions"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Provisioning"
+        ],
+        "summary": "Update provisioning settings",
+        "description": "Merges setting changes into the user's ProvisionSettings. Set a value to null to delete that setting. Strings are capped at 1024 chars.",
+        "operationId": "updateProvisioningDU",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated provisioning settings"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/MessageStream": {
+      "get": {
+        "tags": [
+          "MessageStream"
+        ],
+        "summary": "List message stream items",
+        "description": "Returns call history and message stream items for the user.",
+        "operationId": "listMessageStream",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of message stream items"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/MessageStream/{itemId}": {
+      "get": {
+        "tags": [
+          "MessageStream"
+        ],
+        "summary": "Get message stream item",
+        "operationId": "getMessageStreamItem",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message stream item details"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "MessageStream"
+        ],
+        "summary": "Update message stream item",
+        "operationId": "updateMessageStreamItem",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated message stream item"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "MessageStream"
+        ],
+        "summary": "Delete message stream item",
+        "operationId": "deleteMessageStreamItem",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item deleted"
+          },
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/MessageStream/{itemId}/CallRecording": {
+      "get": {
+        "tags": [
+          "CallRecording"
+        ],
+        "summary": "List call recordings",
+        "description": "Returns call recordings for a message stream item.",
+        "operationId": "listCallRecordings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of call recordings"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/MessageStream/{itemId}/CallRecording/{recordingId}": {
+      "get": {
+        "tags": [
+          "CallRecording"
+        ],
+        "summary": "Get call recording",
+        "operationId": "getCallRecording",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          },
+          {
+            "name": "recordingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Call recording details"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "CallRecording"
+        ],
+        "summary": "Upload call recording",
+        "description": "Uploads a call recording (base64 audio) to S3.",
+        "operationId": "uploadCallRecording",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          },
+          {
+            "name": "recordingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "uID": {
+                    "type": "string",
+                    "description": "Must match recordingId"
+                  },
+                  "sessionid": {
+                    "type": "string",
+                    "description": "Call session ID"
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "description": "Recording size in bytes"
+                  },
+                  "type": {
+                    "type": "string",
+                    "description": "MIME type (e.g. audio/webm;codecs=opus)"
+                  },
+                  "mediaBase64": {
+                    "type": "string",
+                    "description": "Base64-encoded audio data"
+                  }
+                },
+                "required": [
+                  "uID",
+                  "sessionid",
+                  "mediaBase64"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recording uploaded"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/MessageStream/{itemId}/CallQos": {
+      "get": {
+        "tags": [
+          "CallQos"
+        ],
+        "summary": "List call QoS metrics",
+        "operationId": "listCallQos",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of QoS entries"
+          }
+        }
+      }
+    },
+    "/Users/{uID}/MessageStream/{itemId}/CallQos/{qosId}": {
+      "get": {
+        "tags": [
+          "CallQos"
+        ],
+        "summary": "Get call QoS detail",
+        "operationId": "getCallQos",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          },
+          {
+            "name": "qosId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QoS detail"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "CallQos"
+        ],
+        "summary": "Update call QoS metrics",
+        "operationId": "updateCallQos",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uID"
+          },
+          {
+            "$ref": "#/components/parameters/itemId"
+          },
+          {
+            "name": "qosId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "QoS updated"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "uID": {
+        "name": "uID",
+        "in": "path",
+        "required": true,
+        "description": "User ID (MD5 hash of email)",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Domain user ID (MD5 hash of their email)",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "deviceId": {
+        "name": "deviceId",
+        "in": "path",
+        "required": true,
+        "description": "Device provision token",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "connectionId": {
+        "name": "connectionId",
+        "in": "path",
+        "required": true,
+        "description": "Connection ID",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "itemId": {
+        "name": "itemId",
+        "in": "path",
+        "required": true,
+        "description": "Item ID",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "securitySchemes": {
+      "sessionToken": {
+        "type": "apiKey",
+        "name": "X-Api-Key",
+        "in": "header",
+        "description": "Session token obtained from POST /Login"
+      },
+      "bearerPAT": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Personal Access Token for the /Login endpoint"
+      }
+    }
+  }
+}

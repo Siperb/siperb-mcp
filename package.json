@@ -1,0 +1,16 @@
+{
+  "name": "siperb-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing the Siperb API to AI agents",
+  "type": "module",
+  "main": "index.mjs",
+  "bin": {
+    "siperb-mcp": "./index.mjs"
+  },
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}
