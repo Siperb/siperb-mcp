@@ -43,7 +43,9 @@ Most API calls require a **session token**:
 
 129 endpoints across 19 categories: Authentication, Users, Domain Users, Devices, Connections, Address Book, Voicemail, Personal Access Tokens, oAuth/Cognito, Provisioning, Support Tickets, Messaging (Telegram, WhatsApp, Audio Call), Message Stream, Call Recordings, Call QoS, Avatars, vCards, and device/connection logs.
 
-Full API documentation: [postman.com/siperb](https://www.postman.com/siperb/siperb-api/)
+Full API documentation:
+- **Interactive:** [api.siperb.com](https://api.siperb.com) (Swagger UI)
+- **Postman:** [postman.com/siperb](https://www.postman.com/siperb/siperb-api/)
 
 ## License
 
